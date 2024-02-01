@@ -1,3 +1,4 @@
+
 ; to assemble and execute run:
 ;  nasm -f elf64 p1.asm
 ;  ld p1.o
@@ -6,11 +7,20 @@
 section .bss
     digitSpace resb 100
     digitSpacePos resb 8
+    mul_res resb 400
+    temp resb 200
+    array resb 200
+    array2 resb 200
+    div_res resb 200
+
 
 section .data
-    carry: db 4         ; to store carry in adding
-    array: db 100
-    array2: db 100
+    carry: db 0         ; to store carry in adding
+    carry2: db 0
+    sign1: db 0
+    sign2: db 0
+    size1: db 0
+    np: db 4
     
     input_char: db 1
     formatin_c: db "%c", 0
@@ -58,35 +68,54 @@ asm_main:
 
     call read_char      ;the new line character after the operation character
 
+    xor rdx, rdx
+    mov rdx, 0
+    mov byte [np], dl
+
+    xor rdx, rdx
+    mov rdx, '+'
+    mov byte [sign1], dl
 input_loop1:
 
     call read_char      ;main function
 
     cmp rax, 10
     je input_loop2x
+    
+    cmp rax, '-'
+    jne a
+    xor rdx, rdx
+    mov rdx, '-'
+    mov [sign1], dl
+    jmp input_loop1
 
+a:
     mov byte [r14], al
 
     inc r13
+    mov rax, r13
+    mov byte [size1], al
     add r14, 2
 
     jmp input_loop1
 
 input_loop2x:
-    ;sub r14, 2
-    ;mov rdi, r14
-    ;call print_int
-    ;mov rdi, 10
-    ;call print_char
-    ;movzx rdi, byte [r14]
-    ;call print_int
-    ;call print_nl
-    ;add r14, 2
+    xor rdx, rdx
+    mov rdx, '+'
+    mov byte [sign2], dl
 
 input_loop2:
     mov rdi, r13
     call read_char      ;main function
-    
+
+    cmp rax, '-'
+    jne b
+    xor rdx, rdx
+    mov rdx, '-'
+    mov [sign2], dl
+    jmp input_loop2
+
+b:
     cmp rax, 10
     je end_loop
 
@@ -115,31 +144,43 @@ end_loop:
     cmp r12, r9
     je divide_section
 
+    mov r9, '%'
+    cmp r12, r9
+    je mod_section
+
 add_section:
+
+    movzx r10, byte [sign1]
+    cmp r10, '-'
+    je negative
+    ;input1 possitive
+    movzx r10, byte [sign2]
+    cmp r10, '-'
+    je do_the_sub
+    ;pp
+    jmp do_the_adding
+
+negative:
+    movzx r10, byte [sign2]
+    cmp r10, '-'
+    je nn
+    ;np
+    mov rdx, 1
+    mov byte [np], dl
+    jmp do_the_sub
+    
+nn:
+    mov rdi, '-'
+    call print_char
+
+
+do_the_adding:
     mov rax, 0
     mov byte[carry], al
     sub r14, 2
     sub rbp, 2
 
-    ;mov rdi, r14
-    ;call print_int
-    ;call print_nl
-    ;movzx rdi, byte [r14]
-    ;call print_int
-    ;call print_nl
-
-    ;lea r14, [array]
-    ;lea rbp, [array2]
-    ;add r14, r13
-    ;add r14, r13
-    ;add r14, r15
-    ;add r14, r15
-
 add_loop:
-    ;mov rdi, 100000
-    ;call print_int
-    ;call print_nl
-
     cmp r13, r15
     jg input1_is_bigger
 
@@ -212,6 +253,9 @@ both_fininshed:
 print_one:
     mov rdi, '1'
     call print_char
+
+
+
 
 output_loop:
     movzx rdi, byte [r14]
@@ -302,6 +346,32 @@ output_loop_:
 
 
 subtract_section:
+
+    movzx r10, byte [sign1]
+    cmp r10, '-'
+    je negativ
+    ;input1 possitive
+    movzx r10, byte [sign2]
+    cmp r10, '-'
+    je do_the_adding
+    ;pp
+    jmp do_the_sub
+
+negativ:
+    movzx r10, byte [sign2]
+    cmp r10, '-'
+    je nn2
+    ;np
+    mov rdi, '-'
+    call print_char
+    jmp do_the_adding
+    
+nn2:
+    mov rdx, 1
+    mov byte [np], dl
+    
+do_the_sub:
+
     sub r14, 2
     sub rbp, 2
     mov rax, 0
@@ -334,6 +404,12 @@ here:
     jmp end
 
 input1_greater:
+    cmp byte [np], 1
+    jne c
+    mov rdi, '-'
+    call print_char
+
+c:
     mov rax, 0
     mov byte [carry], al
 
@@ -408,6 +484,8 @@ output_loop2:
 input2_greater:
     mov rax, 0
     mov byte [carry], al
+    cmp byte [np], 1
+    je sub_loop2
     mov rdi, '-'
     call print_char
 
@@ -456,6 +534,8 @@ carry_loop2:
     jmp carry_loop2
 
 
+
+
 continue2:
     mov byte [rbp], al
 
@@ -475,11 +555,592 @@ output_loop3:
     jg output_loop3
     jmp end
 
+
 multiply_section:
+    movzx r10, byte [sign1]
+    cmp r10, '-'
+    je a_neg
+    movzx r10, byte [sign2]
+    cmp r10, '-'
+    je print_negative
+    jmp do_nothing
+a_neg:
+    movzx r10, byte [sign2]
+    cmp r10, '-'
+    je do_nothing
+
+print_negative:
+    mov rdi, '-'
+    call print_char
+
+
+do_nothing:
+    
+    ;put '0' in all the indexes of mul_res
+    mov r8, 399
+    lea r9, [mul_res]
+put_zero:
+    mov rax, '0'
+    mov byte [r9], al
+    dec r8
+    cmp r8, 0
+    je after_zero
+    add r9, 1
+    jmp put_zero
+
+after_zero:
+    
+    lea rbp, [array2]
+    add rbp, r15
+    add rbp, r15
+    sub rbp, 2
+
+mul_loop1:
+
+    ;put '0' in all indexes of temp
+    lea r9, [temp]
+    mov r8, 199
+
+    put_zero3:
+        mov rax, '0'
+        mov byte [r9], al
+        dec r8
+        cmp r8, 0
+        je after_zero3
+        add r9, 1
+        jmp put_zero3
+
+    after_zero3:
+    lea r9, [mul_res]
+    add r9, 399
+    lea r8, [temp]
+    add r8, 199
+
+    movzx r13, byte [size1]
+    lea r14, [array]
+    add r14, r13
+    add r14, r13
+    sub r14, 2
+
+    mov rax, 0
+    mov byte [carry], al
+    
+    mul_loop2:
+        movzx rbx, byte [rbp]
+        movzx r12, byte [r14]
+        
+        sub rbx, 48
+        sub r12, 48
+        
+        imul rbx, r12
+        movzx rax, byte [carry]
+        add rbx, rax
+
+        cmp rbx, 10
+        jl after_carry
+        handle_carry:
+            movzx rax, byte [carry]
+            add rax, 1
+            mov byte [carry], al
+            sub rbx, 10
+            cmp rbx, 10
+            jge handle_carry
+            jmp after_carry
+
+
+        after_carry:
+        add rbx, 48
+        mov byte [r8], bl
+        
+        movzx rax, byte [carry]
+        add rax, 48
+        mov byte [r8 - 1], al
+        
+        cmp r14, array
+        je first_input_finished
+
+        sub r14, 2
+        jmp mul_loop2
+
+    first_input_finished:
+
+    ;    lea r14, [mul_res]
+    ;    mov r15, 400
+    ;ll:
+    ;    movzx rdi, byte [r14]
+    ;    call print_char
+    ;    add r14, 1
+    ;    dec r15
+    ;    cmp r15, 0
+    ;    jg ll
+
+
+        ;add temp to mul_res
+
+        mov rax, 0
+        mov byte [carry2], al
+        lea r9, [mul_res]
+        add r9, 399
+        lea r8, [temp]
+        add r8, 199
+        movzx r12, byte [r8]
+        movzx rbx, byte [r9]
+    
+        add_loop3:
+            
+            sub r12, 48
+            sub rbx, 48
+            add rbx, r12
+
+            add bl, byte [carry2]
+
+            mov rax, 0
+            mov byte [carry2], al
+
+            cmp rbx, 10
+            jl we_dont_have_carry3
+
+            mov rax, 1
+            mov byte [carry2], al
+            sub rbx, 10
+
+        we_dont_have_carry3:
+            add rbx, 48
+            mov byte [r9], bl
+
+            cmp r8, temp
+            je add_finished
+            sub r8, 1
+            sub r9, 1
+            jmp add_loop3
+        
+        
+
+        add_finished:
+        
+        lea r14, [mul_res]
+        mov r15, 400
+    ll:
+        movzx rdi, byte [r14]
+        ;call print_char
+        add r14, 1
+        dec r15
+        cmp r15, 0
+        jg ll
+            mov byte [r9], al
+            lea r9, [mul_res]
+            add r9, 399
+            lea r8, [temp]
+            add r8, 199
+;
+;        
+;    
+;        cmp rbp, array2
+;        je multiply_finished
+;        sub rbp, 2
+;        sub r9, 2
+;        jmp mul_loop1
+;
+;multiply_finished:
+;    lea r14, [mul_res]
+;    add r14, 100
+;    mov r13, 199
+;l3:
+;    movzx r8, byte [r14]
+;    cmp r8, '0'
+;    jne print_loop
+;    add r14, 2
+;    dec r13
+;    jmp l3
+;
+;print_loop:
+;    movzx rdi, byte [r14]
+;    call print_char
+;    add r14, 2
+;    dec r13
+;    cmp r13, 0
+;    jg print_loop
+    jmp end
+
+
+
 
 divide_section:
+    movzx r10, byte [sign1]
+    cmp r10, '-'
+    je a_neg2
+    movzx r10, byte [sign2]
+    cmp r10, '-'
+    je print_negative2
+    jmp do_nothing2
+a_neg2:
+    movzx r10, byte [sign2]
+    cmp r10, '-'
+    je do_nothing2
+
+print_negative2:
+    mov rdi, '-'
+    call print_char
+
+
+do_nothing2:
+    ;put '0' in all the indexes of div_res and '0' and '-1' in the first one
+    mov r8, 199
+    lea r14, [div_res]
+put_zero2:
+    mov rax, '0'
+    mov byte [r14], al
+    dec r8
+    cmp r8, 0
+    je after2
+    add r14, 1
+    jmp put_zero2
+after2:
+    add r14, 1
+    mov rax, 47
+    mov byte [r14], al
+
+    mov rax, r13
+    mov byte [size1], al
+    
+div_loop:
+    ;adding_part
+    lea r9, [div_res]
+    add r9, 199
+    
+    movzx rbx, byte [r9]
+    add rbx, 1
+    
+    cmp rbx, 58
+    jl there_is_no_carry
+    sub rbx, 10
+    mov byte [r9], bl
+    jmp carry_loop4
+there_is_no_carry:
+    mov byte [r9], bl
+    jmp after_adding
+
+carry_loop4:
+    sub r9, 1
+    movzx rax, byte [r9]
+    add rax, 1
+    cmp rax, 58
+    jl continue4
+    sub rax, 10
+    mov byte [r9], al
+    jmp carry_loop4
+    
+continue4:
+    mov byte [r9], al
+
+after_adding:
+
+    lea r14, [array]
+    movzx r13, byte [size1]
+
+    lea r14, [array]
+    lea rbp, [array2]
+    add r14, r13
+    add r14, r13
+    sub r14, 2
+    add rbp, r15
+    add rbp, r15
+    sub rbp, 2
+
+
+    lea r11, [array]
+    lea r10, [array2]
+    mov rax, 0
+    mov byte [carry], al
+    
+;this loop is for removing the first zeros of the number
+lop2:
+    movzx r8, byte [r11]
+    cmp r8, '0'
+    jg x2
+    dec r13
+    add r11, 2
+    jmp lop2
+x2:
+    cmp r13, r15
+    jg subtract2
+    jl print_result
+
+
+    ;equal size
+compare_loop3:
+    movzx r9, byte [r11]
+    movzx r8, byte [r10]
+    cmp r9, r8
+    jg subtract2
+    jl print_result
+
+    cmp r11, r14
+    je equal2
+    add r11, 2
+    add r10, 2
+    jmp compare_loop3
+
+equal2:
+    ;adding part
+    lea r9, [div_res]
+    add r9, 199
+    movzx rbx, byte [r9]
+    add rbx, 1
+    cmp rbx, 58
+    jge before_carry
+    mov byte [r9], bl
+    jmp after_adding2
+
+before_carry:
+    sub rbx, 10
+    mov byte [r9], bl
+
+carry_loop5:
+    sub r9, 1
+    movzx rax, byte [r9]
+    add al, 1
+    cmp rax, 58
+    jl continue5
+    sub rax, 10
+    mov byte [r9], al
+    jmp carry_loop5
+    
+continue5:
+    mov byte [r9], al
+after_adding2:
+
+
+print_result:
+    lea r14, [div_res]
+    mov r13, 200
+l2:
+    movzx r8, byte [r14]
+    cmp r8, 0
+    je print_zero
+    cmp r8, '0'
+    jne output_lop
+    add r14, 1
+    dec r13
+    jmp l2
+
+output_lop:
+    movzx rdi, byte [r14]
+    call print_char
+    add r14, 1
+    dec r13
+    cmp r13, 0
+    jg output_lop
+    jmp end
+
+print_zero:
+    mov rdi, 0
+    call print_int
+    jmp end
+
+subtract2:
+    mov rax, 0
+    mov byte [carry], al
+
+subt_loop2:
+    movzx rbx, byte [r14]
+    movzx r12, byte [rbp]
+
+    sub r12, 48
+    sub rbx, r12
+    
+    sub bl, byte [carry]
+    mov rax, 0
+    mov byte [carry], al
+
+    cmp rbx, '0'
+    
+    jge no_carryy2
+
+    mov rax, 1
+    mov byte [carry], al
+    add rbx, 10
+
+no_carryy2:
+    mov rdi, rbx
+    mov byte [r14], bl
+    cmp rbp, array2
+    je carry_loop3
+    sub r14, 2
+    sub rbp, 2
+    jmp subt_loop2
+
+carry_loop3:
+    cmp r14, array
+    je div_loop                     ;there is no carry
+    sub r14, 2
+    movzx rax, byte [r14]
+    sub al, byte [carry]
+    mov rdx, 0
+    mov byte [carry], dl
+    
+    cmp rax, '0'
+    jge z2
+    
+    mov rdx, 1
+    mov byte [carry], dl
+    add rax, 10
+    mov byte [r14], al
+    jmp carry_loop3
+z2:
+    mov byte [r14], al
+    jmp div_loop
+
+
+
+
+
+mod_section:
+    
+    mov rax, r13
+    mov byte [size1], al
+    
+mod_loop:
+
+    lea r14, [array]
+    movzx r13, byte [size1]
+
+    lea r14, [array]
+    lea rbp, [array2]
+    add r14, r13
+    add r14, r13
+    sub r14, 2
+    add rbp, r15
+    add rbp, r15
+    sub rbp, 2
+
+    lea r11, [array]
+    lea r10, [array2]
+    mov rax, 0
+    mov byte [carry], al
+    
+
+lop:
+    movzx r8, byte [r11]
+    cmp r8, '0'
+    jg x
+    dec r13
+    cmp r13, 0
+    je equal
+    add r11, 2
+    jmp lop
+x:
+    cmp r13, r15
+    jg subtract
+    jl print_input1
+
+
+
+    ;equal size
+compare_loop2:
+    movzx r9, byte [r11]
+    movzx r8, byte [r10]
+    cmp r9, r8
+    jg subtract
+    jl print_input1
+
+    cmp r11, r14
+    je equal
+    add r11, 2
+    add r10, 2
+    jmp compare_loop2
+    
+equal:
+    mov rdi, '0'
+    call print_char
+    jmp end
+
+
+print_input1:
+    movzx r10, byte [sign1]
+    cmp r10, '-'
+    jne edame
+    mov rdi, '-'
+    call print_char
+edame:
+    ;mov rdi, r13
+    ;call print_int
+    lea r14, [array]
+    movzx r13, byte [size1]
+l:
+    movzx r8, byte [r14]
+    cmp r8, '0'
+    jne output_loopp
+    add r14, 2
+    dec r13
+    jmp l
+
+output_loopp:
+    movzx rdi, byte [r14]
+    call print_char
+    add r14, 2
+    dec r13
+    cmp r13, 0
+    jg output_loopp
+    jmp end
+
+
+subtract:
+    mov rax, 0
+    mov byte [carry], al
+
+subt_loop:
+    movzx rbx, byte [r14]
+    movzx r12, byte [rbp]
+
+    sub r12, 48
+    sub rbx, r12
+    
+    sub bl, byte [carry]
+    mov rax, 0
+    mov byte [carry], al
+
+    cmp rbx, '0'
+    
+    jge no_carryy
+
+    mov rax, 1
+    mov byte [carry], al
+    add rbx, 10
+
+no_carryy:
+    mov rdi, rbx
+    mov byte [r14], bl
+    cmp rbp, array2
+    je carry_loop22
+    sub r14, 2
+    sub rbp, 2
+    jmp subt_loop
+
+carry_loop22:
+    cmp r14, array
+    je mod_loop                     ;there is no carry
+    sub r14, 2
+    movzx rax, byte [r14]
+    sub al, byte [carry]
+    mov rdx, 0
+    mov byte [carry], dl
+    
+    cmp rax, '0'
+    jge z
+    
+    mov rdx, 1
+    mov byte [carry], dl
+    add rax, 10
+    mov byte [r14], al
+    jmp carry_loop22
+z:
+    mov byte [r14], al
+    jmp mod_loop
 
 end:
+    mov rdi, 10
+    call print_char
     ;--------------------------
 
     add rsp, 8
@@ -532,8 +1193,6 @@ print_string:
 
 print_nl:
     sub rsp, 8
-
-
 
     mov rdi, 10
     call putchar
