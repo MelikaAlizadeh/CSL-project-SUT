@@ -76,9 +76,9 @@ main_loop:
     xor rdx, rdx
     mov rdx, '+'
     mov byte [sign1], dl
-input_loop1:
+input_loop1:                                ;reading and storing input1
 
-    call read_char      ;main function
+    call read_char
 
     cmp rax, 10
     je input_loop2x
@@ -100,14 +100,14 @@ a:
 
     jmp input_loop1
 
-input_loop2x:
+input_loop2x:                           ;handling sign
     xor rdx, rdx
     mov rdx, '+'
     mov byte [sign2], dl
 
-input_loop2:
+input_loop2:                            ;reading and storing input2
     mov rdi, r13
-    call read_char      ;main function
+    call read_char
 
     cmp rax, '-'
     jne b
@@ -127,7 +127,7 @@ b:
 
     jmp input_loop2
 
-end_loop:
+end_loop:                               ;choosing operation
 
     mov r9, '+'
     cmp r12, r9
@@ -151,6 +151,7 @@ end_loop:
 
 add_section:
 
+    ;hadling signs
     movzx r10, byte [sign1]
     cmp r10, '-'
     je negative
@@ -176,12 +177,14 @@ nn:
 
 
 do_the_adding:
+    
+    ;move 0 to carry at first
     mov rax, 0
-    mov byte[carry], al
+    mov byte [carry], al
     sub r14, 2
     sub rbp, 2
 
-add_loop:
+add_loop:                                       ;in each loop, we calculate the sum of two digits and pass the carry to next digits
     cmp r13, r15
     jg input1_is_bigger
 
@@ -210,7 +213,7 @@ add_loop:
     sub rbx, 10
     
 
-we_dont_have_carry:
+we_dont_have_carry:                         ;move the value of one digit to its possition in the bigger input
     add rbx, 48
     mov byte [rbp], bl
 
@@ -225,7 +228,7 @@ print_add:
     cmp rbp, array2
     je both_fininshed
     
-last_carry_loop:
+last_carry_loop:                  ;passing the last carry to the end of the number until the carry is 0 or number is finished
     sub rbp, 2
     movzx rax, byte [rbp]
     add al, byte [carry]
@@ -255,7 +258,7 @@ print_one:
     mov rdi, '1'
     call print_char
 
-output_loop:
+output_loop:                            ;printing the answer
     movzx rdi, byte [r14]
     call print_char
     add r14, 2
@@ -265,7 +268,7 @@ output_loop:
     jmp end
 
 
-input1_is_bigger:
+input1_is_bigger:                       ;same as above
     movzx r12, byte [rbp]
 
     movzx rbx, byte [r14]
@@ -344,7 +347,8 @@ output_loop_:
 
 
 subtract_section:
-
+    
+    ;handling sign here
     movzx r10, byte [sign1]
     cmp r10, '-'
     je negativ
@@ -383,7 +387,7 @@ do_the_sub:
     lea r11, [array]
     lea r10, [array2]
 
-compare_loop:
+compare_loop:                       ;check which one is greater
     movzx r9, byte [r11]
     movzx r8, byte [r10]
     cmp r9, r8
@@ -396,7 +400,7 @@ compare_loop:
     add r10, 2
     jmp compare_loop
     
-here:
+here:                               ;if two numbers are equal the answer is 0
     mov rdi, '0'
     call print_char
     jmp end
@@ -411,12 +415,12 @@ c:
     mov rax, 0
     mov byte [carry], al
 
-sub_loop:
+sub_loop:                               ;in each loop we calculate one digit of the result and pass the carry to the left
     movzx rbx, byte [r14]
     movzx r12, byte [rbp]
     
 
-    ;sub rbx, 48
+ 
     sub r12, 48
     sub rbx, r12
     
@@ -444,7 +448,7 @@ no_carry:
 print_sub:
     lea rbp, [array]        ;for printing
 
-carry_loop:
+carry_loop:                                     ;handling the last carry to left until it is 0
     sub r14, 2
     movzx rax, byte [r14]
     sub al, byte [carry]
@@ -469,7 +473,7 @@ continue3:
     dec r13
     jmp continue3
 
-output_loop2:
+output_loop2:                                   ;printing subtraction result
     movzx rdi, byte [rbp]
     call print_char
     add rbp, 2
@@ -479,7 +483,7 @@ output_loop2:
     jmp end
 
 
-input2_greater:
+input2_greater:                                 ;same as above
     mov rax, 0
     mov byte [carry], al
     cmp byte [np], 1
@@ -577,7 +581,7 @@ after_zero:
     lea r9, [mul_res]
     add r9, 199
 
-mul_loop1:
+mul_loop1:                                      ;iterate on digits of input2
 
     ;print zero if the second input is zero
     lea r14, [array2]
@@ -613,7 +617,7 @@ mul_loop1:
     
     add r8, 1
 
-    mul_loop2:
+    mul_loop2:                                  ;multiplying one digit of input2 to all the digits of input1
         sub r8, 1
         movzx rbx, byte [rbp]
         movzx r12, byte [r14]
@@ -639,7 +643,8 @@ mul_loop1:
 
         after_carry:       ;now we have saved the first digit of the multiplication result in rbx and the second one in [carry].
         
-        ;add rbx to temp
+        ;add rbx and carry to temp
+
         mov r10, r8
         movzx rdx, byte [r10]
         add rdx, rbx
@@ -687,17 +692,6 @@ mul_loop1:
 
     first_input_finished:
 
-        ;lea r14, [temp]
-        ;mov r15, 200
-        ;ll:
-        ;movzx rdi, byte [r14]
-        ;call print_char
-        ;add r14, 1
-        ;dec r15
-        ;cmp r15, 0
-        ;jg ll
-
-
         ;add temp to mul_res
 
         mov rax, 0
@@ -736,6 +730,7 @@ mul_loop1:
             sub r10, 1
             jmp add_loop3
         
+
         add_finished:
 
         lea r8, [temp]
@@ -804,7 +799,8 @@ print_negative2:
     call print_char
 
 
-do_nothing2:
+do_nothing2:                                ;means we don't have to print '-'
+
     ;put '0' in all the indexes of div_res and '0' and '-1' in the first one
     mov r8, 199
     lea r14, [div_res]
@@ -824,8 +820,8 @@ after2:
     mov rax, r13
     mov byte [size1], al
     
-div_loop:
-    ;adding_part
+div_loop:                               ;in each loop we subtract input2 from input1 and check if input1 has become smaller or not.
+    ;adding_part                        ;each time we add one to the result of division
     lea r9, [div_res]
     add r9, 199
     
@@ -854,8 +850,10 @@ carry_loop4:
 continue4:
     mov byte [r9], al
 
+
 after_adding:
 
+    ;storing addresses that are used
     lea r14, [array]
     movzx r13, byte [size1]
 
